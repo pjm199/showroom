@@ -1,0 +1,18 @@
+# [PROJECT_NAME] Tech Stack & Rules
+
+## Core Technologies
+- Next.js App Router (React)
+- TypeScript (Strict Mode)
+- Tailwind CSS
+- shadcn/ui
+- PostgreSQL & Prisma ORM
+
+## Coding Standards
+- Write clean, functional React components.
+- Use an API-first backend architecture (`app/api/...` route handlers) to ensure compatibility with future native mobile apps.
+- Never use inline CSS; always use Tailwind utility classes.
+- Ensure all UI components are mobile-first and highly responsive.
+- Do not add random `TODO` comments unless explicitly told to.
+
+## Project Context
+This is a live digital showroom/vetrina for local shops (fish markets, butchers, etc.). The merchant experience must be ultra-fast, allowing them to snap photos and publish from a smartphone in seconds. The storefront must support both standalone hosted pages and external embeddable widgets via iframe.

@@ -1,0 +1,168 @@
+// [PROJECT_NAME] — MVP Schema
+// Multi-tenant: every tenant is a Shop. Merchant = User linked to one Shop.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------
+// Auth & tenancy
+// --------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  passwordHash String @map("password_hash")
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  shopId String? @unique @map("shop_id")
+  shop   Shop?   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("users")
+}
+
+model Shop {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  imageUrl    String?  @map("image_url")
+  whatsapp    String?
+  address     String?
+  mapUrl      String?  @map("map_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users     User[]
+  categories Category[]
+  products  Product[]
+  orders    Order[]
+  customerGroups CustomerGroup[]
+
+  @@map("shops")
+}
+
+// Optional: segment customers (e.g. "Restaurants", "VIP") for future use.
+// MVP: PRIVATE_LINK uses shareable token; groups can drive links later.
+model CustomerGroup {
+  id        String   @id @default(cuid())
+  shopId    String   @map("shop_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, name])
+  @@map("customer_groups")
+}
+
+// --------------------------------------------
+// Catalog
+// --------------------------------------------
+
+model Category {
+  id        String   @id @default(cuid())
+  shopId    String   @map("shop_id")
+  name      String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  shop     Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@map("categories")
+}
+
+enum ProductVisibility {
+  DRAFT
+  PRIVATE_LINK
+  PUBLIC
+}
+
+model Product {
+  id          String            @id @default(cuid())
+  shopId      String            @map("shop_id")
+  categoryId  String?           @map("category_id")
+  title       String
+  description String?
+  priceCents  Int               @map("price_cents")
+  imageUrl    String?           @map("image_url")
+  visibility  ProductVisibility @default(DRAFT)
+  sortOrder   Int               @default(0) @map("sort_order")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  shop       Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  category   Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems OrderItem[]
+  shareTokens ProductShareToken[]
+
+  @@map("products")
+}
+
+// Shareable link token for PRIVATE_LINK products (e.g. send via WhatsApp).
+model ProductShareToken {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("product_share_tokens")
+}
+
+// --------------------------------------------
+// Orders (reservations)
+// --------------------------------------------
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  shopId      String      @map("shop_id")
+  customerName  String    @map("customer_name")
+  customerPhone String    @map("customer_phone")
+  pickupAt    DateTime?   @map("pickup_at")
+  status      OrderStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  shop  Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+
+  @@index([shopId, status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String   @map("order_id")
+  productId String   @map("product_id")
+  quantity  Int      @default(1)
+  priceCents Int     @map("price_cents") // Snapshot at order time
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productId])
+  @@map("order_items")
+}
