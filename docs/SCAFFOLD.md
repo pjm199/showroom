@@ -83,14 +83,16 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/showroom?schema=publ
 
 ---
 
-## 6. Replace Prisma schema and migrate
+## 6. Prisma schema and migrate
 
-Copy the full `schema.prisma` from this repo’s `prisma/schema.prisma`, then:
+The repo already includes `prisma/schema.prisma`. Create your PostgreSQL database, set `DATABASE_URL` in `.env`, then:
 
 ```bash
 npx prisma migrate dev --name init
 npx prisma generate
 ```
+
+If PostgreSQL is not running yet, you can still run `npx prisma generate` and run migrations later when the database is available.
 
 ---
 
@@ -133,3 +135,4 @@ npx prisma migrate dev --name init
 npx prisma generate
 npm run build
 ```
+  
