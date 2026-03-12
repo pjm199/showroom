@@ -1,5 +1,6 @@
 # Dependencies
 node_modules
+**/next-swc.*.node
 .pnp
 .pnp.js
 
@@ -34,3 +35,4 @@ prisma/migrations/**/migration_lock.toml
 # TypeScript
 next-env.d.ts
 .vercel
+node_modules
