@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ProfileForm } from "./profile-form";
+import { ShareLinkCard } from "./share-link-card";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -29,7 +30,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="max-w-lg space-y-5">
+    <div className="max-w-lg space-y-8">
       <h1 className="text-xl font-semibold text-slate-800">Shop profile</h1>
       <ProfileForm
         initial={{
@@ -42,6 +43,7 @@ export default async function ProfilePage() {
           mapUrl: shop.mapUrl ?? "",
         }}
       />
+      <ShareLinkCard />
     </div>
   );
 }

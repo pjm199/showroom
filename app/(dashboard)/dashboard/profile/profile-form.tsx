@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { blobDisplayUrl } from "@/lib/utils";
 
 type Initial = {
   name: string;
@@ -183,7 +184,7 @@ export function ProfileForm({ initial }: { initial: Initial }) {
           {imageUrl && (
             <div className="flex items-center gap-3">
               <img
-                src={imageUrl}
+                src={blobDisplayUrl(imageUrl) ?? imageUrl}
                 alt="Logo"
                 className="w-20 h-20 rounded-xl object-cover border-2 border-slate-200 shadow"
                 onError={(e) => {

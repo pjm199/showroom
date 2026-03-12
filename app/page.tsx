@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { blobDisplayUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,11 @@ async function getLatestShops() {
 }
 
 export default async function HomePage() {
+  const session = await auth();
+  if (session?.user && (session.user as { shopId?: string }).shopId) {
+    redirect("/dashboard");
+  }
+
   const latestShops = await getLatestShops();
   return (
     <main className="min-h-screen flex flex-col bg-slate-50">
@@ -96,7 +104,7 @@ export default async function HomePage() {
                   >
                     {shop.imageUrl ? (
                       <img
-                        src={shop.imageUrl}
+                        src={blobDisplayUrl(shop.imageUrl) ?? shop.imageUrl}
                         alt={`${shop.name} logo`}
                         className="w-20 h-20 rounded-xl object-cover mx-auto mb-4 ring-2 ring-white shadow-md"
                       />

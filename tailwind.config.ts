@@ -8,6 +8,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      aspectRatio: {
+        golden: "1.618",
+        "golden-inverse": "0.618",
+      },
       colors: {
         border: "var(--border)",
         ring: "var(--ring)",

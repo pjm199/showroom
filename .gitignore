@@ -33,3 +33,4 @@ prisma/migrations/**/migration_lock.toml
 
 # TypeScript
 next-env.d.ts
+.vercel
