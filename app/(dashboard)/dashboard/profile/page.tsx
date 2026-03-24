@@ -41,6 +41,7 @@ export default async function ProfilePage() {
           whatsapp: shop.whatsapp ?? "",
           address: shop.address ?? "",
           mapUrl: shop.mapUrl ?? "",
+          orderingEnabled: shop.orderingEnabled,
         }}
       />
       <ShareLinkCard />

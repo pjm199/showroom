@@ -13,6 +13,7 @@ type Initial = {
   whatsapp: string;
   address: string;
   mapUrl: string;
+  orderingEnabled: boolean;
 };
 
 const inputClass =
@@ -28,6 +29,9 @@ export function ProfileForm({ initial }: { initial: Initial }) {
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
   const [address, setAddress] = useState(initial.address);
   const [mapUrl, setMapUrl] = useState(initial.mapUrl);
+  const [orderingEnabled, setOrderingEnabled] = useState(
+    initial.orderingEnabled
+  );
   const [error, setError] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -52,6 +56,7 @@ export function ProfileForm({ initial }: { initial: Initial }) {
           whatsapp: whatsapp || null,
           address: address || null,
           mapUrl: mapUrl || null,
+          orderingEnabled,
         }),
       });
       const data = await res.json();
@@ -154,6 +159,25 @@ export function ProfileForm({ initial }: { initial: Initial }) {
           rows={3}
           className={inputClass + " min-h-[100px] resize-y py-3"}
         />
+      </div>
+      <div className="rounded-xl border-2 border-slate-200 bg-slate-50/90 p-4 space-y-2">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={orderingEnabled}
+            onChange={(e) => setOrderingEnabled(e.target.checked)}
+            className="mt-1 size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <span>
+            <span className="block text-sm font-medium text-slate-800">
+              Allow online reservations
+            </span>
+            <span className="block text-xs text-slate-600 mt-1 leading-relaxed">
+              When off, your storefront is view-only: no cart and no pickup
+              orders. Good for a pure vetrina (new arrivals, product of the week).
+            </span>
+          </span>
+        </label>
       </div>
       <div>
         <label className={labelClass}>Shop logo</label>

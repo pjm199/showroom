@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { blobDisplayUrl } from "@/lib/utils";
@@ -12,6 +12,7 @@ function formatPrice(cents: number): string {
 type Product = {
   id: string;
   title: string;
+  description: string | null;
   priceCents: number;
   imageUrl: string | null;
   category: { id: string; name: string } | null;
@@ -19,14 +20,14 @@ type Product = {
 
 type Props = {
   slug: string;
-  shopName: string;
+  orderingEnabled: boolean;
   products: Product[];
   categories?: { id: string; name: string }[];
 };
 
 export function StorefrontProducts({
   slug,
-  shopName,
+  orderingEnabled,
   products,
   categories = [],
 }: Props) {
@@ -41,6 +42,13 @@ export function StorefrontProducts({
   const [formPickup, setFormPickup] = useState("");
   const [formNotes, setFormNotes] = useState("");
 
+  useEffect(() => {
+    if (!orderingEnabled) {
+      setCart({});
+      setShowForm(false);
+    }
+  }, [orderingEnabled]);
+
   const filteredProducts =
     categoryFilter === null
       ? products
@@ -48,7 +56,10 @@ export function StorefrontProducts({
   const totalItems = (Object.values(cart) as number[]).reduce((a, q) => a + q, 0);
 
   function addToCart(productId: string) {
-    setCart((prev: Record<string, number>) => ({ ...prev, [productId]: (prev[productId] ?? 0) + 1 }));
+    setCart((prev: Record<string, number>) => ({
+      ...prev,
+      [productId]: (prev[productId] ?? 0) + 1,
+    }));
   }
 
   function removeFromCart(productId: string) {
@@ -155,72 +166,83 @@ export function StorefrontProducts({
           {categoryFilter ? "No products in this category." : "No products."}
         </p>
       ) : (
-      <ul className="grid grid-cols-1 gap-6">
-        {filteredProducts.map((p) => {
-          const imgSrc = blobDisplayUrl(p.imageUrl) ?? p.imageUrl;
-          const qty = cart[p.id] ?? 0;
-          return (
-            <li
-              key={p.id}
-              className="rounded-[0.618rem] border-2 border-slate-200 bg-white overflow-hidden shadow-md hover:shadow-md hover:border-slate-300 transition-all flex flex-col sm:flex-row"
-            >
-              <div className="w-full sm:w-[61.8%] sm:max-w-sm flex-shrink-0 aspect-golden overflow-hidden bg-slate-100">
-                {imgSrc ? (
-                  <img
-                    src={imgSrc}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl text-slate-400">
-                    📦
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 p-5 flex flex-col justify-center min-w-0">
-                {p.category?.name && (
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
-                    {p.category.name}
-                  </p>
-                )}
-                <p className="font-medium text-slate-800 text-base sm:text-lg line-clamp-2">
-                  {p.title}
-                </p>
-                <div className="mt-3 flex items-center justify-between gap-4">
-                  <p className="text-base sm:text-lg font-semibold text-emerald-600 shrink-0">
-                    {formatPrice(p.priceCents)}
-                  </p>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => removeFromCart(p.id)}
-                      disabled={qty === 0}
-                      className="w-9 h-9 rounded-[0.618rem] border-2 border-slate-200 flex items-center justify-center text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-medium text-lg leading-none"
-                      aria-label="Remove one"
-                    >
-                      −
-                    </button>
-                    <span className="text-base font-medium w-6 text-center tabular-nums">
-                      {qty}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => addToCart(p.id)}
-                      className="w-9 h-9 rounded-[0.618rem] border-2 border-emerald-500 bg-emerald-50 text-emerald-700 flex items-center justify-center hover:bg-emerald-100 font-medium text-lg leading-none"
-                      aria-label="Add one"
-                    >
-                      +
-                    </button>
+        <ul className="grid grid-cols-1 gap-[1.618rem]">
+          {filteredProducts.map((p) => {
+            const imgSrc = blobDisplayUrl(p.imageUrl) ?? p.imageUrl;
+            const qty = cart[p.id] ?? 0;
+            return (
+              <li
+                key={p.id}
+                className="rounded-[0.618rem] border-2 border-slate-200 bg-white overflow-hidden shadow-md hover:border-slate-300 transition-all flex flex-col sm:flex-row"
+              >
+                <div className="w-full sm:w-[61.8%] sm:max-w-md flex-shrink-0">
+                  <div className="aspect-golden w-full bg-slate-100 flex items-center justify-center p-3 sm:p-4 min-h-0">
+                    {imgSrc ? (
+                      <img
+                        src={imgSrc}
+                        alt=""
+                        className="max-w-full max-h-full w-auto h-auto object-contain"
+                      />
+                    ) : (
+                      <div className="w-full h-full min-h-[6rem] flex items-center justify-center text-4xl text-slate-400">
+                        📦
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                <div className="flex-1 min-w-0 p-[1.618rem] flex flex-col justify-between gap-2">
+                  <div className="space-y-2 min-h-0">
+                    {p.category?.name && (
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                        {p.category.name}
+                      </p>
+                    )}
+                    <p className="font-semibold text-slate-800 text-base sm:text-lg leading-snug line-clamp-2">
+                      {p.title}
+                    </p>
+                    {p.description ? (
+                      <p className="text-sm text-slate-600 leading-relaxed line-clamp-4">
+                        {p.description}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-end justify-between gap-3 pt-2 border-t border-slate-100">
+                    <p className="text-base sm:text-lg font-semibold text-emerald-600 tabular-nums">
+                      {formatPrice(p.priceCents)}
+                    </p>
+                    {orderingEnabled ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(p.id)}
+                          disabled={qty === 0}
+                          className="w-9 h-9 rounded-[0.618rem] border-2 border-slate-200 flex items-center justify-center text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-medium text-lg leading-none"
+                          aria-label="Remove one"
+                        >
+                          −
+                        </button>
+                        <span className="text-base font-medium w-6 text-center tabular-nums">
+                          {qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => addToCart(p.id)}
+                          className="w-9 h-9 rounded-[0.618rem] border-2 border-emerald-500 bg-emerald-50 text-emerald-700 flex items-center justify-center hover:bg-emerald-100 font-medium text-lg leading-none"
+                          aria-label="Add one"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
-      {totalItems > 0 && (
+      {orderingEnabled && totalItems > 0 && (
         <div className="sticky bottom-0 left-0 right-0 mt-6 p-5 bg-white border-t-2 border-slate-200 shadow-lg rounded-t-[1.618rem]">
           {!showForm ? (
             <Button
@@ -244,7 +266,9 @@ export function StorefrontProducts({
                 <input
                   type="text"
                   value={formName}
-                  onChange={(e) => setFormName((e.target as HTMLInputElement).value)}
+                  onChange={(e) =>
+                    setFormName((e.target as HTMLInputElement).value)
+                  }
                   required
                   maxLength={200}
                   className="w-full min-h-[3rem] rounded-[1.618rem] border-2 border-slate-200 px-5 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400"
@@ -258,7 +282,9 @@ export function StorefrontProducts({
                 <input
                   type="tel"
                   value={formPhone}
-                  onChange={(e) => setFormPhone((e.target as HTMLInputElement).value)}
+                  onChange={(e) =>
+                    setFormPhone((e.target as HTMLInputElement).value)
+                  }
                   required
                   maxLength={50}
                   className="w-full min-h-[3rem] rounded-[1.618rem] border-2 border-slate-200 px-5 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400"
@@ -272,7 +298,9 @@ export function StorefrontProducts({
                 <input
                   type="datetime-local"
                   value={formPickup}
-                  onChange={(e) => setFormPickup((e.target as HTMLInputElement).value)}
+                  onChange={(e) =>
+                    setFormPickup((e.target as HTMLInputElement).value)
+                  }
                   className="w-full min-h-[3rem] rounded-[1.618rem] border-2 border-slate-200 px-5 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400"
                 />
               </div>
@@ -282,7 +310,9 @@ export function StorefrontProducts({
                 </label>
                 <textarea
                   value={formNotes}
-                  onChange={(e) => setFormNotes((e.target as HTMLTextAreaElement).value)}
+                  onChange={(e) =>
+                    setFormNotes((e.target as HTMLTextAreaElement).value)
+                  }
                   maxLength={500}
                   rows={2}
                   className="w-full rounded-[1.618rem] border-2 border-slate-200 px-5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 resize-none"

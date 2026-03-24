@@ -39,6 +39,8 @@ model Shop {
   mapUrl               String?   @map("map_url")
   shareToken           String?   @unique @map("share_token")
   shareTokenExpiresAt  DateTime? @map("share_token_expires_at")
+  /// When false, storefront is view-only (no cart / reservations).
+  orderingEnabled      Boolean   @default(true) @map("ordering_enabled")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
 

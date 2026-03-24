@@ -20,6 +20,7 @@ export async function GET(
       whatsapp: true,
       address: true,
       mapUrl: true,
+      orderingEnabled: true,
     },
   });
   if (!shop) {

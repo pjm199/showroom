@@ -44,6 +44,7 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
       mapUrl: true,
       shareToken: true,
       shareTokenExpiresAt: true,
+      orderingEnabled: true,
     },
   });
 
@@ -97,11 +98,13 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
         <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
           <div className="flex items-start gap-4 sm:gap-5">
             {shopImageSrc ? (
-              <img
-                src={shopImageSrc}
-                alt=""
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-[0.618rem] object-cover border-2 border-amber-200/90 shadow-sm shrink-0 ring-2 ring-amber-100/50"
-              />
+              <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-[0.618rem] border-2 border-amber-200/90 shadow-sm ring-2 ring-amber-100/50 bg-amber-50/80 flex items-center justify-center p-1.5">
+                <img
+                  src={shopImageSrc}
+                  alt=""
+                  className="max-w-full max-h-full w-auto h-auto object-contain"
+                />
+              </div>
             ) : (
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-[0.618rem] bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-3xl shrink-0 border border-amber-200/80 shadow-sm">
                 {shop.name.charAt(0).toUpperCase()}
@@ -183,6 +186,14 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
           {isOwner ? "← Back to Dashboard" : "← Back to Showroom"}
         </Link>
 
+        {!shop.orderingEnabled && products.length > 0 && (
+          <p className="mb-4 text-sm text-amber-900 bg-amber-100/80 border border-amber-200/80 rounded-[1rem] px-4 py-3">
+            <span className="font-semibold">Vetrina sola lettura.</span>{" "}
+            Prenotazioni online disattivate — sfoglia i prodotti e contatta il
+            negozio (WhatsApp / in negozio).
+          </p>
+        )}
+
         {products.length === 0 ? (
           <div className="rounded-[1.618rem] border-2 border-dashed border-slate-200 bg-white p-10 text-center text-slate-500">
             <p className="font-medium">No products yet</p>
@@ -193,10 +204,11 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
         ) : (
           <StorefrontProducts
             slug={shop.slug}
-            shopName={shop.name}
+            orderingEnabled={shop.orderingEnabled}
             products={products.map((p) => ({
               id: p.id,
               title: p.title,
+              description: p.description,
               priceCents: p.priceCents,
               imageUrl: p.imageUrl,
               category: p.category,
@@ -239,7 +251,9 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
             </div>
           </div>
           <p className="text-xs text-amber-800/70 mt-4 pt-4 border-t border-amber-200/60 text-center sm:text-left">
-            Showroom — Reserve for pickup
+            {shop.orderingEnabled
+              ? "Tua Vetrina — prenota il ritiro"
+              : "Tua Vetrina — solo consultazione"}
           </p>
         </div>
       </footer>

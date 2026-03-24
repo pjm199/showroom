@@ -12,10 +12,16 @@ export async function POST(
   const { slug } = await params;
   const shop = await prisma.shop.findUnique({
     where: { slug },
-    select: { id: true },
+    select: { id: true, orderingEnabled: true },
   });
   if (!shop) {
     return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  }
+  if (!shop.orderingEnabled) {
+    return NextResponse.json(
+      { error: "Online reservations are disabled for this shop" },
+      { status: 403 }
+    );
   }
 
   let body: unknown;

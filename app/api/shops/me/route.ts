@@ -11,6 +11,7 @@ const updateShopSchema = z.object({
   address: z.string().nullable().optional(),
   mapUrl: z.string().url().nullable().optional(),
   imageUrl: z.string().url().nullable().optional(),
+  orderingEnabled: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -37,6 +38,7 @@ export async function GET() {
     whatsapp: shop.whatsapp,
     address: shop.address,
     mapUrl: shop.mapUrl,
+    orderingEnabled: shop.orderingEnabled,
   });
 }
 
@@ -80,6 +82,9 @@ export async function PATCH(request: Request) {
         ...(data.address !== undefined && { address: data.address }),
         ...(data.mapUrl !== undefined && { mapUrl: data.mapUrl }),
         ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+        ...(data.orderingEnabled !== undefined && {
+          orderingEnabled: data.orderingEnabled,
+        }),
       },
     });
     return NextResponse.json({
@@ -91,6 +96,7 @@ export async function PATCH(request: Request) {
       whatsapp: shop.whatsapp,
       address: shop.address,
       mapUrl: shop.mapUrl,
+      orderingEnabled: shop.orderingEnabled,
     });
   } catch (e) {
     console.error(e);
