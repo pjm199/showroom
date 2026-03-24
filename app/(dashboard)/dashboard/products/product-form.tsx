@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { blobDisplayUrl } from "@/lib/utils";
 
@@ -166,9 +167,11 @@ export function ProductForm({ productId, initial }: Props) {
           {uploadingImage ? "Uploading…" : "📷 Take photo or choose image"}
         </Button>
         {imageUrl && (
-          <img
+          <Image
             src={blobDisplayUrl(imageUrl) ?? imageUrl}
             alt=""
+            width={96}
+            height={96}
             className="mt-3 w-24 h-24 rounded-xl object-cover border-2 border-slate-200"
           />
         )}

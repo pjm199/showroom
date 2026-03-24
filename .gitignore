@@ -36,3 +36,5 @@ prisma/migrations/**/migration_lock.toml
 next-env.d.ts
 .vercel
 node_modules
+
+.vercel

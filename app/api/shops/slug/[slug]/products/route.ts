@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma, ProductVisibility } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 /**
@@ -26,9 +27,9 @@ export async function GET(
     shop.shareToken === token &&
     (!shop.shareTokenExpiresAt || shop.shareTokenExpiresAt > new Date());
 
-  const visibilityFilter = hasValidShareLink
-    ? { visibility: { in: ["PUBLIC", "PRIVATE_LINK"] as const } }
-    : { visibility: "PUBLIC" };
+  const visibilityFilter: Prisma.ProductWhereInput = hasValidShareLink
+    ? { visibility: { in: [ProductVisibility.PUBLIC, ProductVisibility.PRIVATE_LINK] } }
+    : { visibility: ProductVisibility.PUBLIC };
 
   try {
     const products = await prisma.product.findMany({

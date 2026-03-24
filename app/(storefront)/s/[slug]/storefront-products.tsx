@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { blobDisplayUrl } from "@/lib/utils";
@@ -45,14 +45,14 @@ export function StorefrontProducts({
     categoryFilter === null
       ? products
       : products.filter((p) => p.category?.name === categoryFilter);
-  const totalItems = Object.values(cart).reduce((a, q) => a + q, 0);
+  const totalItems = (Object.values(cart) as number[]).reduce((a, q) => a + q, 0);
 
   function addToCart(productId: string) {
-    setCart((prev) => ({ ...prev, [productId]: (prev[productId] ?? 0) + 1 }));
+    setCart((prev: Record<string, number>) => ({ ...prev, [productId]: (prev[productId] ?? 0) + 1 }));
   }
 
   function removeFromCart(productId: string) {
-    setCart((prev) => {
+    setCart((prev: Record<string, number>) => {
       const next = { ...prev };
       const q = (next[productId] ?? 0) - 1;
       if (q <= 0) delete next[productId];
@@ -61,7 +61,7 @@ export function StorefrontProducts({
     });
   }
 
-  async function handleSubmitReservation(e: React.FormEvent) {
+  async function handleSubmitReservation(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const name = formName.trim();
     const phone = formPhone.trim();
@@ -72,7 +72,8 @@ export function StorefrontProducts({
     setError("");
     setSubmitting(true);
     try {
-      const items = Object.entries(cart)
+      const entries = Object.entries(cart) as [string, number][];
+      const items = entries
         .filter(([, q]) => q > 0)
         .map(([productId, quantity]) => ({ productId, quantity }));
       const body: {
@@ -243,7 +244,7 @@ export function StorefrontProducts({
                 <input
                   type="text"
                   value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
+                  onChange={(e) => setFormName((e.target as HTMLInputElement).value)}
                   required
                   maxLength={200}
                   className="w-full min-h-[3rem] rounded-[1.618rem] border-2 border-slate-200 px-5 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400"
@@ -257,7 +258,7 @@ export function StorefrontProducts({
                 <input
                   type="tel"
                   value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
+                  onChange={(e) => setFormPhone((e.target as HTMLInputElement).value)}
                   required
                   maxLength={50}
                   className="w-full min-h-[3rem] rounded-[1.618rem] border-2 border-slate-200 px-5 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400"
@@ -271,7 +272,7 @@ export function StorefrontProducts({
                 <input
                   type="datetime-local"
                   value={formPickup}
-                  onChange={(e) => setFormPickup(e.target.value)}
+                  onChange={(e) => setFormPickup((e.target as HTMLInputElement).value)}
                   className="w-full min-h-[3rem] rounded-[1.618rem] border-2 border-slate-200 px-5 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400"
                 />
               </div>
@@ -281,7 +282,7 @@ export function StorefrontProducts({
                 </label>
                 <textarea
                   value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
+                  onChange={(e) => setFormNotes((e.target as HTMLTextAreaElement).value)}
                   maxLength={500}
                   rows={2}
                   className="w-full rounded-[1.618rem] border-2 border-slate-200 px-5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 resize-none"

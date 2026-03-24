@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Prisma, ProductVisibility } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { blobDisplayUrl } from "@/lib/utils";
@@ -59,9 +60,9 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
     !!token &&
     shop.shareToken === token &&
     (!shop.shareTokenExpiresAt || shop.shareTokenExpiresAt > new Date());
-  const visibilityFilter = hasValidShareLink
-    ? { visibility: { in: ["PUBLIC", "PRIVATE_LINK"] as const } }
-    : { visibility: "PUBLIC" as const };
+  const visibilityFilter: Prisma.ProductWhereInput = hasValidShareLink
+    ? { visibility: { in: [ProductVisibility.PUBLIC, ProductVisibility.PRIVATE_LINK] } }
+    : { visibility: ProductVisibility.PUBLIC };
 
   const [categories, products] = await Promise.all([
     prisma.category.findMany({

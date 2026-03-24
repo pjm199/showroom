@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
@@ -45,7 +45,7 @@ export function OrdersListClient() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  async function fetchOrders() {
+  const fetchOrders = useCallback(async () => {
     setError("");
     try {
       const url = statusFilter
@@ -63,11 +63,11 @@ export function OrdersListClient() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter]);
+  }, [fetchOrders]);
 
   // Poll for new orders every 30s and when tab/window gains focus
   useEffect(() => {
@@ -83,7 +83,7 @@ export function OrdersListClient() {
       window.removeEventListener("focus", onVisible);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [statusFilter]);
+  }, [fetchOrders]);
 
   async function updateStatus(orderId: string, status: string) {
     setUpdatingId(orderId);
