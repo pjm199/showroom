@@ -105,7 +105,7 @@ export function ProductGallery({ imageUrls, productTitle }: Props) {
                     : "border-slate-200 opacity-85 hover:opacity-100"
                 }`}
                 aria-label={`Immagine ${i + 1} di ${urls.length}`}
-                aria-current={active}
+                aria-current={active ? "true" : undefined}
               >
                 <img
                   src={thumbSrc}
