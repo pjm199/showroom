@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { dedupeCap } from "@/lib/product-images";
 import { createProductSchema } from "@/lib/validations/product";
 
 async function getShopId(): Promise<string | null> {
@@ -23,18 +24,25 @@ export async function GET() {
       },
     });
     return NextResponse.json(
-      products.map((p) => ({
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        priceCents: p.priceCents,
-        categoryId: p.categoryId,
-        categoryName: p.category?.name ?? null,
-        imageUrl: p.imageUrl,
-        visibility: p.visibility,
-        sortOrder: p.sortOrder,
-        createdAt: p.createdAt,
-      }))
+      products.map((p) => {
+        const imageUrls = dedupeCap(
+          p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : [],
+          5
+        );
+        return {
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          priceCents: p.priceCents,
+          categoryId: p.categoryId,
+          categoryName: p.category?.name ?? null,
+          imageUrl: imageUrls[0] ?? p.imageUrl,
+          imageUrls,
+          visibility: p.visibility,
+          sortOrder: p.sortOrder,
+          createdAt: p.createdAt,
+        };
+      })
     );
   } catch (e) {
     console.error(e);
@@ -60,6 +68,12 @@ export async function POST(request: Request) {
       );
     }
     const data = parsed.data;
+    const imageUrls =
+      data.imageUrls && data.imageUrls.length > 0
+        ? dedupeCap(data.imageUrls, 5)
+        : data.imageUrl
+          ? dedupeCap([data.imageUrl], 5)
+          : [];
     if (data.categoryId) {
       const cat = await prisma.category.findFirst({
         where: { id: data.categoryId, shopId },
@@ -78,7 +92,8 @@ export async function POST(request: Request) {
         description: data.description?.trim() ?? null,
         priceCents: data.priceCents,
         categoryId: data.categoryId ?? null,
-        imageUrl: data.imageUrl ?? null,
+        imageUrls,
+        imageUrl: imageUrls[0] ?? null,
         visibility: data.visibility,
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
       },
@@ -86,6 +101,14 @@ export async function POST(request: Request) {
         category: { select: { id: true, name: true } },
       },
     });
+    const outUrls = dedupeCap(
+      product.imageUrls?.length
+        ? product.imageUrls
+        : product.imageUrl
+          ? [product.imageUrl]
+          : [],
+      5
+    );
     return NextResponse.json({
       id: product.id,
       title: product.title,
@@ -93,7 +116,8 @@ export async function POST(request: Request) {
       priceCents: product.priceCents,
       categoryId: product.categoryId,
       categoryName: product.category?.name ?? null,
-      imageUrl: product.imageUrl,
+      imageUrl: outUrls[0] ?? product.imageUrl,
+      imageUrls: outUrls,
       visibility: product.visibility,
       sortOrder: product.sortOrder,
       createdAt: product.createdAt,

@@ -3,7 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { blobDisplayUrl } from "@/lib/utils";
+import { ProductGallery } from "@/components/storefront/product-gallery";
 
 function formatPrice(cents: number): string {
   return (cents / 100).toFixed(2).replace(".", ",") + " €";
@@ -14,7 +14,7 @@ type Product = {
   title: string;
   description: string | null;
   priceCents: number;
-  imageUrl: string | null;
+  imageUrls: string[];
   category: { id: string; name: string } | null;
 };
 
@@ -166,48 +166,40 @@ export function StorefrontProducts({
           {categoryFilter ? "No products in this category." : "No products."}
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-[1.618rem]">
+        <ul className="flex flex-col gap-[1.618rem]">
           {filteredProducts.map((p) => {
-            const imgSrc = blobDisplayUrl(p.imageUrl) ?? p.imageUrl;
             const qty = cart[p.id] ?? 0;
             return (
               <li
                 key={p.id}
-                className="rounded-[0.618rem] border-2 border-slate-200 bg-white overflow-hidden shadow-md hover:border-slate-300 transition-all flex flex-col sm:flex-row"
+                className="rounded-[0.618rem] border-2 border-slate-200 bg-white shadow-md hover:border-slate-300 transition-all overflow-hidden flex flex-col sm:flex-row sm:items-stretch"
               >
-                <div className="w-full sm:w-[61.8%] sm:max-w-md flex-shrink-0">
-                  <div className="aspect-golden w-full bg-slate-100 flex items-center justify-center p-3 sm:p-4 min-h-0">
-                    {imgSrc ? (
-                      <img
-                        src={imgSrc}
-                        alt=""
-                        className="max-w-full max-h-full w-auto h-auto object-contain"
-                      />
-                    ) : (
-                      <div className="w-full h-full min-h-[6rem] flex items-center justify-center text-4xl text-slate-400">
-                        📦
-                      </div>
-                    )}
+                <div className="w-full sm:w-[min(61.8%,26rem)] sm:flex-shrink-0 sm:max-w-[50%] border-b sm:border-b-0 sm:border-r border-slate-100 bg-slate-50/50">
+                  <div className="p-2 sm:p-3">
+                    <ProductGallery
+                      imageUrls={p.imageUrls}
+                      productTitle={p.title}
+                    />
                   </div>
                 </div>
-                <div className="flex-1 min-w-0 p-[1.618rem] flex flex-col justify-between gap-2">
+                <div className="flex-1 min-w-0 p-4 sm:p-[1.618rem] flex flex-col justify-between gap-3">
                   <div className="space-y-2 min-h-0">
                     {p.category?.name && (
                       <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                         {p.category.name}
                       </p>
                     )}
-                    <p className="font-semibold text-slate-800 text-base sm:text-lg leading-snug line-clamp-2">
+                    <p className="font-semibold text-slate-800 text-lg sm:text-xl leading-snug">
                       {p.title}
                     </p>
                     {p.description ? (
-                      <p className="text-sm text-slate-600 leading-relaxed line-clamp-4">
+                      <p className="text-sm sm:text-[0.95rem] text-slate-600 leading-relaxed line-clamp-5">
                         {p.description}
                       </p>
                     ) : null}
                   </div>
                   <div className="flex flex-wrap items-end justify-between gap-3 pt-2 border-t border-slate-100">
-                    <p className="text-base sm:text-lg font-semibold text-emerald-600 tabular-nums">
+                    <p className="text-lg sm:text-xl font-semibold text-emerald-600 tabular-nums">
                       {formatPrice(p.priceCents)}
                     </p>
                     {orderingEnabled ? (
@@ -216,18 +208,18 @@ export function StorefrontProducts({
                           type="button"
                           onClick={() => removeFromCart(p.id)}
                           disabled={qty === 0}
-                          className="w-9 h-9 rounded-[0.618rem] border-2 border-slate-200 flex items-center justify-center text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-medium text-lg leading-none"
+                          className="w-10 h-10 rounded-[0.618rem] border-2 border-slate-200 flex items-center justify-center text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-medium text-xl leading-none"
                           aria-label="Remove one"
                         >
                           −
                         </button>
-                        <span className="text-base font-medium w-6 text-center tabular-nums">
+                        <span className="text-base font-medium w-7 text-center tabular-nums">
                           {qty}
                         </span>
                         <button
                           type="button"
                           onClick={() => addToCart(p.id)}
-                          className="w-9 h-9 rounded-[0.618rem] border-2 border-emerald-500 bg-emerald-50 text-emerald-700 flex items-center justify-center hover:bg-emerald-100 font-medium text-lg leading-none"
+                          className="w-10 h-10 rounded-[0.618rem] border-2 border-emerald-500 bg-emerald-50 text-emerald-700 flex items-center justify-center hover:bg-emerald-100 font-medium text-xl leading-none"
                           aria-label="Add one"
                         >
                           +

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { normalizeProductImageUrls } from "@/lib/product-images";
 import { ProductForm } from "../../product-form";
 
 export default async function EditProductPage({
@@ -39,9 +40,13 @@ export default async function EditProductPage({
           description: product.description ?? "",
           priceCents: product.priceCents,
           categoryId: product.categoryId ?? "",
-          imageUrl: product.imageUrl ?? "",
+          imageUrls: normalizeProductImageUrls(product),
           visibility:
-            product.visibility === "PUBLIC" ? "PUBLIC" : "DRAFT",
+            product.visibility === "PUBLIC"
+              ? "PUBLIC"
+              : product.visibility === "PRIVATE_LINK"
+                ? "PRIVATE_LINK"
+                : "DRAFT",
         }}
       />
     </div>

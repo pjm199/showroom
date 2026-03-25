@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma, ProductVisibility } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { normalizeProductImageUrls } from "@/lib/product-images";
 
 /**
  * Public API: list products for a shop by slug.
@@ -43,16 +44,20 @@ export async function GET(
       },
     });
     return NextResponse.json(
-      products.map((p) => ({
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        priceCents: p.priceCents,
-        categoryId: p.categoryId,
-        categoryName: p.category?.name ?? null,
-        imageUrl: p.imageUrl,
-        sortOrder: p.sortOrder,
-      }))
+      products.map((p) => {
+        const imageUrls = normalizeProductImageUrls(p);
+        return {
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          priceCents: p.priceCents,
+          categoryId: p.categoryId,
+          categoryName: p.category?.name ?? null,
+          imageUrl: imageUrls[0] ?? p.imageUrl,
+          imageUrls,
+          sortOrder: p.sortOrder,
+        };
+      })
     );
   } catch (e) {
     console.error(e);

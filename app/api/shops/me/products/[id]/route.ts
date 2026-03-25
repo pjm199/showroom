@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { dedupeCap } from "@/lib/product-images";
 import { updateProductSchema } from "@/lib/validations/product";
 
 async function getShopId(): Promise<string | null> {
@@ -27,6 +28,14 @@ export async function GET(
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
+  const imageUrls = dedupeCap(
+    product.imageUrls?.length
+      ? product.imageUrls
+      : product.imageUrl
+        ? [product.imageUrl]
+        : [],
+    5
+  );
   return NextResponse.json({
     id: product.id,
     title: product.title,
@@ -34,7 +43,8 @@ export async function GET(
     priceCents: product.priceCents,
     categoryId: product.categoryId,
     categoryName: product.category?.name ?? null,
-    imageUrl: product.imageUrl,
+    imageUrl: imageUrls[0] ?? product.imageUrl,
+    imageUrls,
     visibility: product.visibility,
     sortOrder: product.sortOrder,
     createdAt: product.createdAt,
@@ -66,6 +76,14 @@ export async function PATCH(
       );
     }
     const data = parsed.data;
+    let imagePatch: { imageUrls: string[]; imageUrl: string | null } | undefined;
+    if (data.imageUrls !== undefined) {
+      const urls = dedupeCap(data.imageUrls, 5);
+      imagePatch = { imageUrls: urls, imageUrl: urls[0] ?? null };
+    } else if (data.imageUrl !== undefined) {
+      const urls = data.imageUrl ? dedupeCap([data.imageUrl], 5) : [];
+      imagePatch = { imageUrls: urls, imageUrl: data.imageUrl };
+    }
     if (data.categoryId !== undefined && data.categoryId !== null) {
       const cat = await prisma.category.findFirst({
         where: { id: data.categoryId, shopId },
@@ -84,7 +102,10 @@ export async function PATCH(
         ...(data.description !== undefined && { description: data.description?.trim() ?? null }),
         ...(data.priceCents !== undefined && { priceCents: data.priceCents }),
         ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
-        ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+        ...(imagePatch && {
+          imageUrls: imagePatch.imageUrls,
+          imageUrl: imagePatch.imageUrl,
+        }),
         ...(data.visibility !== undefined && { visibility: data.visibility }),
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
       },
@@ -92,6 +113,14 @@ export async function PATCH(
         category: { select: { id: true, name: true } },
       },
     });
+    const outUrls = dedupeCap(
+      product.imageUrls?.length
+        ? product.imageUrls
+        : product.imageUrl
+          ? [product.imageUrl]
+          : [],
+      5
+    );
     return NextResponse.json({
       id: product.id,
       title: product.title,
@@ -99,7 +128,8 @@ export async function PATCH(
       priceCents: product.priceCents,
       categoryId: product.categoryId,
       categoryName: product.category?.name ?? null,
-      imageUrl: product.imageUrl,
+      imageUrl: outUrls[0] ?? product.imageUrl,
+      imageUrls: outUrls,
       visibility: product.visibility,
       sortOrder: product.sortOrder,
       createdAt: product.createdAt,

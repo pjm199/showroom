@@ -13,6 +13,7 @@ type Product = {
   priceCents: number;
   categoryName: string | null;
   imageUrl: string | null;
+  imageUrls: string[];
   visibility: string;
   createdAt: string;
 };
@@ -98,22 +99,47 @@ export function ProductsListClient() {
             No products yet. Tap &quot;Add product&quot; to create one.
           </li>
         ) : (
-          products.map((p) => (
+          products.map((p) => {
+            const imgs =
+              p.imageUrls?.length > 0
+                ? p.imageUrls
+                : p.imageUrl
+                  ? [p.imageUrl]
+                  : [];
+            const cover = imgs[0];
+            return (
             <li
               key={p.id}
               className="flex gap-4 rounded-xl border-2 border-slate-200 bg-white p-4"
             >
-              {p.imageUrl ? (
-                <img
-                  src={blobDisplayUrl(p.imageUrl) ?? p.imageUrl}
-                  alt=""
-                  className="w-20 h-20 rounded-lg object-cover shrink-0"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-lg bg-slate-100 flex items-center justify-center text-2xl text-slate-400 shrink-0">
-                  📦
+              <div className="flex flex-col items-center gap-1.5 shrink-0 w-[5.25rem]">
+                <div className="w-[5.25rem] h-[5.25rem] rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden p-1">
+                  {cover ? (
+                    <img
+                      src={blobDisplayUrl(cover) ?? cover}
+                      alt=""
+                      className="max-w-full max-h-full w-auto h-auto object-contain"
+                    />
+                  ) : (
+                    <span className="text-2xl text-slate-400" aria-hidden>
+                      📦
+                    </span>
+                  )}
                 </div>
-              )}
+                {imgs.length > 1 && (
+                  <div className="flex gap-1 justify-center flex-wrap max-w-full">
+                    {imgs.slice(0, 5).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                          i === 0 ? "bg-emerald-500" : "bg-slate-300"
+                        }`}
+                        aria-hidden
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-800 truncate">{p.title}</p>
                 <p className="text-sm text-slate-600">{formatPrice(p.priceCents)}</p>
@@ -150,7 +176,8 @@ export function ProductsListClient() {
                 </Button>
               </div>
             </li>
-          ))
+            );
+          })
         )}
       </ul>
     </div>

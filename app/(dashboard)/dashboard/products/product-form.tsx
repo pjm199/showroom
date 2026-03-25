@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { blobDisplayUrl } from "@/lib/utils";
 
@@ -14,9 +13,11 @@ type ProductFormInitial = {
   description: string;
   priceCents: number;
   categoryId: string;
-  imageUrl: string;
+  imageUrls: string[];
   visibility: "DRAFT" | "PRIVATE_LINK" | "PUBLIC";
 };
+
+const MAX_IMAGES = 5;
 
 const inputClass =
   "w-full min-h-[48px] rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:border-emerald-400";
@@ -37,8 +38,12 @@ export function ProductForm({ productId, initial }: Props) {
     initial ? (initial.priceCents / 100).toFixed(2) : ""
   );
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
-  const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
-  const [visibility, setVisibility] = useState<"DRAFT" | "PRIVATE_LINK" | "PUBLIC">(
+  const [imageUrls, setImageUrls] = useState<string[]>(
+    initial?.imageUrls?.length ? initial.imageUrls.slice(0, MAX_IMAGES) : []
+  );
+  const [visibility, setVisibility] = useState<
+    "DRAFT" | "PRIVATE_LINK" | "PUBLIC"
+  >(
     initial?.visibility === "PUBLIC"
       ? "PUBLIC"
       : initial?.visibility === "PRIVATE_LINK"
@@ -67,10 +72,28 @@ export function ProductForm({ productId, initial }: Props) {
     return "Something went wrong";
   }
 
+  function removeImageAt(i: number) {
+    setImageUrls((prev) => prev.filter((_, j) => j !== i));
+  }
+
+  function moveImage(from: number, dir: -1 | 1) {
+    setImageUrls((prev) => {
+      const to = from + dir;
+      if (to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      [next[from], next[to]] = [next[to], next[from]];
+      return next;
+    });
+  }
+
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !file.type.startsWith("image/")) return;
+    if (imageUrls.length >= MAX_IMAGES) {
+      setError(`Massimo ${MAX_IMAGES} foto per prodotto`);
+      return;
+    }
     setUploadingImage(true);
     setError("");
     try {
@@ -83,7 +106,11 @@ export function ProductForm({ productId, initial }: Props) {
         setError(toErrorString(data.error) || "Upload failed");
         return;
       }
-      if (data.url) setImageUrl(data.url);
+      if (data.url) {
+        setImageUrls((prev) =>
+          prev.length >= MAX_IMAGES ? prev : [...prev, data.url as string]
+        );
+      }
     } catch {
       setError("Upload failed");
     } finally {
@@ -112,7 +139,7 @@ export function ProductForm({ productId, initial }: Props) {
         description: description.trim() || null,
         priceCents,
         categoryId: categoryId || null,
-        imageUrl: imageUrl || null,
+        imageUrls: imageUrls.slice(0, MAX_IMAGES),
         visibility,
       };
       const url = isEdit
@@ -147,7 +174,9 @@ export function ProductForm({ productId, initial }: Props) {
       )}
 
       <div>
-        <label className={labelClass}>Photo</label>
+        <label className={labelClass}>
+          Foto (max {MAX_IMAGES}) — prima immagine = copertina
+        </label>
         <input
           ref={fileInputRef}
           type="file"
@@ -155,25 +184,69 @@ export function ProductForm({ productId, initial }: Props) {
           capture="environment"
           onChange={handleImageUpload}
           className="hidden"
-          aria-label="Upload product photo"
+          aria-label="Carica foto prodotto"
         />
         <Button
           type="button"
           variant="outline"
-          disabled={uploadingImage}
+          disabled={uploadingImage || imageUrls.length >= MAX_IMAGES}
           onClick={() => fileInputRef.current?.click()}
           className="w-full min-h-[48px] rounded-xl text-base font-medium border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50"
         >
-          {uploadingImage ? "Uploading…" : "📷 Take photo or choose image"}
+          {uploadingImage
+            ? "Caricamento…"
+            : imageUrls.length >= MAX_IMAGES
+              ? `Hai già ${MAX_IMAGES} foto`
+              : `📷 Aggiungi foto (${imageUrls.length}/${MAX_IMAGES})`}
         </Button>
-        {imageUrl && (
-          <Image
-            src={blobDisplayUrl(imageUrl) ?? imageUrl}
-            alt=""
-            width={96}
-            height={96}
-            className="mt-3 w-24 h-24 rounded-xl object-cover border-2 border-slate-200"
-          />
+        {imageUrls.length > 0 && (
+          <ul className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {imageUrls.map((url, i) => (
+              <li
+                key={`${url}-${i}`}
+                className="relative rounded-xl border-2 border-slate-200 bg-slate-50 overflow-hidden aspect-square flex items-center justify-center p-2"
+              >
+                <img
+                  src={blobDisplayUrl(url) ?? url}
+                  alt=""
+                  className="max-w-full max-h-full object-contain"
+                />
+                <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => removeImageAt(i)}
+                    className="w-8 h-8 rounded-lg bg-white/95 border border-slate-200 text-sm font-medium text-red-600 shadow-sm"
+                    aria-label="Rimuovi foto"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="absolute bottom-1.5 left-1.5 right-1.5 flex gap-1 justify-center">
+                  <button
+                    type="button"
+                    disabled={i === 0}
+                    onClick={() => moveImage(i, -1)}
+                    className="flex-1 min-h-8 rounded-md bg-white/95 border border-slate-200 text-xs font-medium disabled:opacity-30"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    disabled={i === imageUrls.length - 1}
+                    onClick={() => moveImage(i, 1)}
+                    className="flex-1 min-h-8 rounded-md bg-white/95 border border-slate-200 text-xs font-medium disabled:opacity-30"
+                  >
+                    →
+                  </button>
+                </div>
+                {i === 0 && (
+                  <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold uppercase tracking-wide bg-emerald-600 text-white px-2 py-0.5 rounded-md">
+                    Copertina
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

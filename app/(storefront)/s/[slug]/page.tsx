@@ -4,6 +4,7 @@ import { Prisma, ProductVisibility } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { blobDisplayUrl } from "@/lib/utils";
+import { normalizeProductImageUrls } from "@/lib/product-images";
 import { StorefrontProducts } from "./storefront-products";
 
 export const dynamic = "force-dynamic";
@@ -210,7 +211,7 @@ export default async function StorefrontPage({ params, searchParams }: Props) {
               title: p.title,
               description: p.description,
               priceCents: p.priceCents,
-              imageUrl: p.imageUrl,
+              imageUrls: normalizeProductImageUrls(p),
               category: p.category,
             }))}
             categories={categories.map((c) => ({ id: c.id, name: c.name }))}
