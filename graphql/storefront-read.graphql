@@ -1,0 +1,215 @@
+# Read-only storefront contract (GraphQL-first design artifact).
+# Mirrors types/v2/* — see docs/graphql-typescript-mapping.md
+# P0: schema + codegen only; no runtime server — see graphql/README.md
+schema {
+  query: StorefrontQuery
+}
+
+scalar JSONObject
+
+# --- Enums (align types/v2/product.ts, types/v2/catalog.ts) ---
+
+enum ProductBadge {
+  NEW
+  FEATURED
+  PROMO
+  LIMITED
+  BESTSELLER
+  SEASONAL
+}
+
+enum CollectionType {
+  SEASONAL
+  PROMO
+  EDITORIAL
+  LAUNCH
+  OUTLET
+  B2B
+}
+
+# --- Query root (future resolvers; today: REST /api/v2/frontend/...) ---
+
+type StorefrontQuery {
+  "Homepage with composed sections — GET .../frontend/{shopSlug}/homepage"
+  homepage(shopSlug: String!): HomepageViewModel
+
+  "Product detail — GET .../frontend/{shopSlug}/products/{slug}"
+  productPage(shopSlug: String!, productSlug: String!): ProductPageViewModel
+
+  "Collection listing — GET .../frontend/{shopSlug}/collections/{slug}"
+  collectionPage(shopSlug: String!, collectionSlug: String!): CollectionPageViewModel
+}
+
+# --- Shared ---
+
+type ShopSummary {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  imageUrl: String
+  whatsapp: String
+  address: String
+  mapUrl: String
+}
+
+type MediaViewModel {
+  url: String!
+  altText: String
+  width: Int
+  height: Int
+  focalPoint: MediaFocalPoint
+}
+
+type MediaFocalPoint {
+  x: Float!
+  y: Float!
+}
+
+type SeoMeta {
+  title: String!
+  description: String
+  canonicalUrl: String!
+  ogImage: String
+}
+
+type BreadcrumbItem {
+  label: String!
+  href: String!
+}
+
+# --- Homepage (composer-driven) ---
+
+type HomepageViewModel {
+  shop: ShopSummary!
+  sections: [RenderedSection!]!
+  seo: SeoMeta!
+}
+
+type RenderedSection {
+  id: ID!
+  "Section type id, e.g. hero, carousel, featured-grid"
+  type: String!
+  config: JSONObject!
+  "Slot name -> resolved entities (product cards, collection, media, or manual JSON)"
+  bindings: JSONObject!
+}
+
+# --- Product page ---
+
+type ProductPageViewModel {
+  product: StorefrontProductDetail!
+  breadcrumbs: [BreadcrumbItem!]!
+  relatedCollections: [CollectionSummaryViewModel!]!
+  seo: SeoMeta!
+}
+
+type StorefrontProductDetail {
+  id: ID!
+  slug: String!
+  title: String!
+  shortDescription: String
+  longDescription: String
+  priceCents: Int
+  isPurchasable: Boolean!
+  badges: [ProductBadge!]!
+  highlights: [String!]!
+  brand: BrandSummary
+  category: CategorySummary
+  media: [StorefrontProductMedia!]!
+  variants: [VariantViewModel!]!
+  structuredData: ProductJsonLd!
+}
+
+type BrandSummary {
+  id: ID!
+  name: String!
+  slug: String!
+}
+
+type CategorySummary {
+  id: ID!
+  name: String!
+  slug: String!
+}
+
+type StorefrontProductMedia {
+  url: String!
+  altText: String
+  width: Int
+  height: Int
+  focalPoint: MediaFocalPoint
+}
+
+type VariantViewModel {
+  id: ID!
+  label: String!
+  sku: String
+  attributes: JSONObject!
+  priceCents: Int
+  coverMedia: MediaViewModel
+  isAvailable: Boolean!
+}
+
+type ProductJsonLd {
+  context: String!
+  type: String!
+  name: String!
+  description: String
+  image: [String!]!
+  brand: JsonLdBrand
+  offers: ProductOfferJsonLd!
+}
+
+type JsonLdBrand {
+  type: String!
+  name: String!
+}
+
+type ProductOfferJsonLd {
+  type: String!
+  priceCurrency: String!
+  price: Float
+  availability: String!
+}
+
+# --- Collection page ---
+
+type CollectionPageViewModel {
+  collection: StorefrontCollectionDetail!
+  products: [ProductCardViewModel!]!
+  seo: SeoMeta!
+}
+
+type StorefrontCollectionDetail {
+  id: ID!
+  slug: String!
+  name: String!
+  subtitle: String
+  description: String
+  type: CollectionType!
+  heroMedia: MediaViewModel
+  startAt: String
+  endAt: String
+}
+
+type ProductCardViewModel {
+  id: ID!
+  slug: String!
+  title: String!
+  shortDescription: String
+  priceCents: Int
+  isPurchasable: Boolean!
+  coverMedia: MediaViewModel
+  badges: [ProductBadge!]!
+  brand: BrandSummary
+}
+
+type CollectionSummaryViewModel {
+  id: ID!
+  slug: String!
+  name: String!
+  subtitle: String
+  type: CollectionType!
+  heroMedia: MediaViewModel
+}

@@ -6,7 +6,16 @@
     "dev": "next dev --turbopack",
     "build": "node scripts/build.mjs",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "v2:generate": "prisma generate --schema=prisma/schema-v2.prisma",
+    "v2:migrate:dev": "prisma migrate dev --schema=prisma/schema-v2.prisma",
+    "v2:migrate:deploy": "prisma migrate deploy --schema=prisma/schema-v2.prisma",
+    "v2:db:push": "prisma db push --schema=prisma/schema-v2.prisma",
+    "v2:studio": "prisma studio --schema=prisma/schema-v2.prisma",
+    "v2:seed:sections": "ts-node prisma/seed-v2-section-types.ts",
+    "v2:migrate:tenant": "ts-node scripts/migrate-v1-to-v2.ts",
+    "v2:verify:migration": "ts-node scripts/verify-v2-migration.ts",
+    "graphql:codegen": "graphql-codegen --config graphql/codegen.yml"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
@@ -34,7 +43,10 @@
     "@types/react-dom": "^19",
     "autoprefixer": "^10",
     "eslint": "^9",
+    "@graphql-codegen/cli": "^6.1.1",
+    "@graphql-codegen/typescript": "^5.0.7",
     "eslint-config-next": "^15.0.0",
+    "graphql": "^16.13.1",
     "postcss": "^8",
     "prisma": "^6.19.2",
     "tailwindcss": "^3.4.0",

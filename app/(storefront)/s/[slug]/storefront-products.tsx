@@ -174,8 +174,8 @@ export function StorefrontProducts({
                 key={p.id}
                 className="rounded-[0.618rem] border-2 border-slate-200 bg-white shadow-md hover:border-slate-300 transition-all overflow-hidden flex flex-col sm:flex-row sm:items-stretch"
               >
-                <div className="w-full sm:w-[min(61.8%,26rem)] sm:flex-shrink-0 sm:max-w-[50%] border-b sm:border-b-0 sm:border-r border-slate-100 bg-slate-50/50">
-                  <div className="p-2 sm:p-3">
+                <div className="w-full sm:w-[min(58%,24rem)] sm:flex-shrink-0 sm:max-w-[48%] border-b sm:border-b-0 sm:border-r border-amber-100/50 bg-white">
+                  <div className="p-0 sm:p-2">
                     <ProductGallery
                       imageUrls={p.imageUrls}
                       productTitle={p.title}

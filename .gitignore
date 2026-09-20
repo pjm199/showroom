@@ -38,3 +38,7 @@ next-env.d.ts
 node_modules
 
 .vercel
+
+# V2 Prisma generated client (run: npm run v2:generate)
+lib/prisma-v2-client/
+

@@ -1,0 +1,12 @@
+overwrite: true
+schema: graphql/storefront-read.graphql
+generates:
+  graphql/generated/storefront-read.types.ts:
+    plugins:
+      - typescript
+    config:
+      enumsAsTypes: false
+      useTypeImports: false
+      skipTypename: true
+      scalars:
+        JSONObject: Record<string, unknown>

@@ -1,0 +1,813 @@
+// Vetrina V2 — PostgreSQL Schema
+// All V2 tables use the "v2_" prefix to coexist safely with V1 tables
+// in the same Postgres instance.
+//
+// V1 schema (schema.prisma) remains untouched.
+// This file is the authoritative schema for all V2 domains.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/prisma-v2-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_V2")
+  // Optional for Supabase/Vercel pooler: uncomment and set DIRECT_URL_V2 in .env
+  // directUrl = env("DIRECT_URL_V2")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum V2OperatingMode {
+  BASE
+  FULL
+
+  @@map("v2_operating_mode")
+}
+
+enum V2UserRole {
+  OWNER
+  ADMIN
+  EDITOR
+  SALES_OPERATOR
+  B2B_MANAGER
+  APPROVER
+
+  @@map("v2_user_role")
+}
+
+enum V2ProductBadge {
+  NEW
+  FEATURED
+  PROMO
+  LIMITED
+  BESTSELLER
+  SEASONAL
+
+  @@map("v2_product_badge")
+}
+
+enum V2ProductDisplayStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+  SEASONAL
+
+  @@map("v2_product_display_status")
+}
+
+enum V2MediaRole {
+  COVER
+  GALLERY
+  HERO
+  THUMBNAIL
+
+  @@map("v2_media_role")
+}
+
+enum V2PublicationTargetType {
+  STOREFRONT
+  B2B_CATALOG
+  ECOMMERCE_CHANNEL
+  WIDGET
+  SECTION
+
+  @@map("v2_publication_target_type")
+}
+
+enum V2PublicationEntityType {
+  PRODUCT
+  COLLECTION
+  PAGE
+
+  @@map("v2_publication_entity_type")
+}
+
+enum V2PublicationStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  UNPUBLISHED
+  FAILED
+
+  @@map("v2_publication_status")
+}
+
+enum V2PublicationSyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  NOT_APPLICABLE
+
+  @@map("v2_publication_sync_status")
+}
+
+enum V2AudienceRuleType {
+  PUBLIC
+  B2B_ONLY
+  SEGMENT
+  PRIVATE_LINK
+
+  @@map("v2_audience_rule_type")
+}
+
+enum V2CollectionType {
+  SEASONAL
+  PROMO
+  EDITORIAL
+  LAUNCH
+  OUTLET
+  B2B
+
+  @@map("v2_collection_type")
+}
+
+enum V2PageType {
+  HOMEPAGE
+  CATEGORY
+  COLLECTION
+  LANDING
+  BRAND
+
+  @@map("v2_page_type")
+}
+
+enum V2PageVersionStatus {
+  DRAFT
+  PREVIEW
+  PUBLISHED
+  ARCHIVED
+
+  @@map("v2_page_version_status")
+}
+
+enum V2BindingType {
+  PRODUCT
+  COLLECTION
+  MEDIA_ASSET
+  MANUAL
+
+  @@map("v2_binding_type")
+}
+
+enum V2PublishEventAction {
+  PUBLISH
+  UNPUBLISH
+  SCHEDULE
+  CANCEL_SCHEDULE
+  ROLLBACK
+
+  @@map("v2_publish_event_action")
+}
+
+enum V2PublishEventEntityType {
+  PRODUCT
+  PAGE
+  COLLECTION
+  B2B_CATALOG
+
+  @@map("v2_publish_event_entity_type")
+}
+
+enum V2B2BOrderStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+
+  @@map("v2_b2b_order_status")
+}
+
+// ─── Tenant Domain ────────────────────────────────────────────────────────────
+
+model V2Shop {
+  id                  String           @id @default(cuid())
+  name                String
+  slug                String           @unique
+  description         String?
+  imageUrl            String?          @map("image_url")
+  whatsapp            String?
+  address             String?
+  mapUrl              String?          @map("map_url")
+  operatingMode       V2OperatingMode  @default(BASE) @map("operating_mode")
+  orderingEnabled     Boolean          @default(true) @map("ordering_enabled")
+  shareToken          String?          @unique @map("share_token")
+  shareTokenExpiresAt DateTime?        @map("share_token_expires_at")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  users              V2User[]
+  brands             V2Brand[]
+  categories         V2Category[]
+  products           V2Product[]
+  collections        V2Collection[]
+  publicationTargets V2PublicationTarget[]
+  publicationIntents V2PublicationIntent[]
+  audienceRules      V2AudienceRule[]
+  mediaAssets        V2MediaAsset[]
+  b2bCatalogs        V2B2BCatalog[]
+  b2bClients         V2B2BClient[]
+  b2bAccessInvites   V2B2BAccessInvite[]
+  b2bOrders          V2B2BOrder[]
+  pages              V2Page[]
+  publishEvents      V2PublishEvent[]
+  customerGroups     V2CustomerGroup[]
+
+  @@map("v2_shops")
+}
+
+model V2User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String      @map("password_hash")
+  name         String?
+  shopId       String      @map("shop_id")
+  role         V2UserRole  @default(EDITOR)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  shop           V2Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  uploadedAssets V2MediaAsset[]
+  pageVersions   V2PageVersion[]
+  publishEvents  V2PublishEvent[]
+  releaseRecords V2ReleaseRecord[]
+
+  @@index([shopId])
+  @@map("v2_users")
+}
+
+model V2CustomerGroup {
+  id        String   @id @default(cuid())
+  shopId    String   @map("shop_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  shop       V2Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  b2bClients V2B2BClient[]
+
+  @@unique([shopId, name])
+  @@map("v2_customer_groups")
+}
+
+// ─── Product Authoring Domain ─────────────────────────────────────────────────
+
+model V2Brand {
+  id          String   @id @default(cuid())
+  shopId      String   @map("shop_id")
+  name        String
+  slug        String
+  description String?
+  logoAssetId String?  @map("logo_asset_id")
+  websiteUrl  String?  @map("website_url")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  shop      V2Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  logoAsset V2MediaAsset? @relation("BrandLogo", fields: [logoAssetId], references: [id], onDelete: SetNull)
+  products  V2Product[]
+
+  @@unique([shopId, slug])
+  @@map("v2_brands")
+}
+
+model V2Category {
+  id          String   @id @default(cuid())
+  shopId      String   @map("shop_id")
+  parentId    String?  @map("parent_id")
+  name        String
+  slug        String
+  description String?
+  coverAssetId String? @map("cover_asset_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  shop        V2Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  parent      V2Category?   @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children    V2Category[]  @relation("CategoryChildren")
+  coverAsset  V2MediaAsset? @relation("CategoryCover", fields: [coverAssetId], references: [id], onDelete: SetNull)
+  products    V2Product[]
+
+  @@unique([shopId, slug])
+  @@map("v2_categories")
+}
+
+model V2Product {
+  id                  String                 @id @default(cuid())
+  shopId              String                 @map("shop_id")
+  title               String
+  shortDescription    String?                @map("short_description")
+  longDescription     String?                @map("long_description")
+  slug                String
+  sku                 String?
+  brandId             String?                @map("brand_id")
+  categoryId          String?                @map("category_id")
+  tags                String[]               @default([])
+  badges              V2ProductBadge[]       @default([])
+  highlights          String[]               @default([])
+  presentationNotes   String?                @map("presentation_notes")
+  priceCents          Int?                   @map("price_cents")
+  isPurchasable       Boolean                @default(true) @map("is_purchasable")
+  displayStatus       V2ProductDisplayStatus @default(DRAFT) @map("display_status")
+  publicationReadiness Int                   @default(0) @map("publication_readiness")
+  sortOrder           Int                    @default(0) @map("sort_order")
+  createdAt           DateTime               @default(now()) @map("created_at")
+  updatedAt           DateTime               @updatedAt @map("updated_at")
+
+  shop            V2Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  brand           V2Brand?              @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  category        V2Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  media           V2ProductMedia[]
+  variants        V2ProductVariantView[]
+  collectionItems V2CollectionItem[]
+  b2bCatalogItems       V2B2BCatalogItem[]
+  b2bClientPriceOverrides V2B2BClientPriceOverride[]
+  sectionBindings       V2SectionBinding[]
+
+  @@unique([shopId, slug])
+  @@index([shopId, displayStatus])
+  @@index([shopId, categoryId])
+  @@index([shopId, brandId])
+  @@map("v2_products")
+}
+
+model V2ProductMedia {
+  id        String      @id @default(cuid())
+  productId String      @map("product_id")
+  assetId   String      @map("asset_id")
+  role      V2MediaRole @default(GALLERY)
+  sortOrder Int         @default(0) @map("sort_order")
+  altText   String?     @map("alt_text")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  product V2Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  asset   V2MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, assetId, role])
+  @@index([productId, role])
+  @@map("v2_product_media")
+}
+
+model V2ProductVariantView {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  label       String
+  sku         String?
+  attributes  Json     @default("{}")
+  priceCents  Int?     @map("price_cents")
+  coverAssetId String? @map("cover_asset_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isAvailable Boolean  @default(true) @map("is_available")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  product     V2Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  coverAsset  V2MediaAsset? @relation("VariantCover", fields: [coverAssetId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@map("v2_product_variant_views")
+}
+
+// ─── Publication Domain ───────────────────────────────────────────────────────
+
+model V2PublicationTarget {
+  id         String                  @id @default(cuid())
+  shopId     String                  @map("shop_id")
+  type       V2PublicationTargetType
+  name       String
+  channelRef String?                 @map("channel_ref")
+  isActive   Boolean                 @default(true) @map("is_active")
+  createdAt  DateTime                @default(now()) @map("created_at")
+
+  shop    V2Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  intents V2PublicationIntent[]
+
+  @@index([shopId, type])
+  @@map("v2_publication_targets")
+}
+
+model V2PublicationIntent {
+  id             String                  @id @default(cuid())
+  shopId         String                  @map("shop_id")
+  entityType     V2PublicationEntityType @map("entity_type")
+  /// Stores the id of the referenced Product, Collection, or Page.
+  /// No DB-level FK; integrity enforced at application layer.
+  entityId       String                  @map("entity_id")
+  targetId       String                  @map("target_id")
+  status         V2PublicationStatus     @default(DRAFT)
+  scheduledAt    DateTime?               @map("scheduled_at")
+  expiresAt      DateTime?               @map("expires_at")
+  publishedAt    DateTime?               @map("published_at")
+  unpublishedAt  DateTime?               @map("unpublished_at")
+  audienceRuleId String?                 @map("audience_rule_id")
+  syncStatus     V2PublicationSyncStatus @default(NOT_APPLICABLE) @map("sync_status")
+  syncError      String?                 @map("sync_error")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  shop         V2Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  target       V2PublicationTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  audienceRule V2AudienceRule?     @relation(fields: [audienceRuleId], references: [id], onDelete: SetNull)
+
+  @@unique([entityType, entityId, targetId])
+  @@index([shopId, entityType, entityId])
+  @@index([shopId, status])
+  @@index([scheduledAt])
+  @@map("v2_publication_intents")
+}
+
+model V2AudienceRule {
+  id         String             @id @default(cuid())
+  shopId     String             @map("shop_id")
+  name       String
+  type       V2AudienceRuleType
+  segmentIds String[]           @default([]) @map("segment_ids")
+  accessToken String?           @unique @map("access_token")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  shop        V2Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  intents     V2PublicationIntent[]
+  sections    V2SectionInstance[]
+  b2bCatalogs V2B2BCatalog[]
+
+  @@index([shopId])
+  @@map("v2_audience_rules")
+}
+
+model V2Collection {
+  id             String           @id @default(cuid())
+  shopId         String           @map("shop_id")
+  name           String
+  slug           String
+  subtitle       String?
+  description    String?
+  type           V2CollectionType @default(EDITORIAL)
+  heroAssetId    String?          @map("hero_asset_id")
+  startAt        DateTime?        @map("start_at")
+  endAt          DateTime?        @map("end_at")
+  seoTitle       String?          @map("seo_title")
+  seoDescription String?          @map("seo_description")
+  sortOrder      Int              @default(0) @map("sort_order")
+  isActive       Boolean          @default(true) @map("is_active")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  shop            V2Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  heroAsset       V2MediaAsset?      @relation("CollectionHero", fields: [heroAssetId], references: [id], onDelete: SetNull)
+  items           V2CollectionItem[]
+  sectionBindings V2SectionBinding[]
+
+  @@unique([shopId, slug])
+  @@index([shopId, type, isActive])
+  @@map("v2_collections")
+}
+
+model V2CollectionItem {
+  id           String   @id @default(cuid())
+  collectionId String   @map("collection_id")
+  productId    String   @map("product_id")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  collection V2Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product    V2Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, productId])
+  @@map("v2_collection_items")
+}
+
+// ─── Media Domain ─────────────────────────────────────────────────────────────
+
+model V2MediaAsset {
+  id          String   @id @default(cuid())
+  shopId      String   @map("shop_id")
+  url         String
+  mimeType    String   @map("mime_type")
+  width       Int?
+  height      Int?
+  sizeBytes   Int      @map("size_bytes")
+  altText     String?  @map("alt_text")
+  focalPointX Float?   @map("focal_point_x")
+  focalPointY Float?   @map("focal_point_y")
+  tags        String[] @default([])
+  uploadedBy  String   @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  shop               V2Shop                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  uploader           V2User                 @relation(fields: [uploadedBy], references: [id], onDelete: Restrict)
+  productMedia       V2ProductMedia[]
+  brandLogos         V2Brand[]              @relation("BrandLogo")
+  categoryCover      V2Category[]           @relation("CategoryCover")
+  collectionHero     V2Collection[]         @relation("CollectionHero")
+  variantCovers      V2ProductVariantView[] @relation("VariantCover")
+  b2bCatalogCovers   V2B2BCatalog[]         @relation("CatalogCover")
+  sectionBindings    V2SectionBinding[]
+
+  @@index([shopId])
+  @@index([shopId, mimeType])
+  @@map("v2_media_assets")
+}
+
+// ─── B2B Catalog Domain ───────────────────────────────────────────────────────
+
+model V2B2BCatalog {
+  id                  String   @id @default(cuid())
+  shopId              String   @map("shop_id")
+  clientId            String?  @map("client_id")
+  name                String
+  slug                String
+  description         String?
+  notes               String?
+  coverAssetId        String?  @map("cover_asset_id")
+  audienceRuleId      String?  @map("audience_rule_id")
+  priceListRef        String?  @map("price_list_ref")
+  requestOrderEnabled Boolean  @default(false) @map("request_order_enabled")
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  shop          V2Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  client        V2B2BClient?        @relation("DedicatedCatalog", fields: [clientId], references: [id], onDelete: SetNull)
+  coverAsset    V2MediaAsset?       @relation("CatalogCover", fields: [coverAssetId], references: [id], onDelete: SetNull)
+  audienceRule  V2AudienceRule?     @relation(fields: [audienceRuleId], references: [id], onDelete: SetNull)
+  items         V2B2BCatalogItem[]
+  assignedClients V2B2BClient[]     @relation("AssignedCatalog")
+  accessInvites V2B2BAccessInvite[]
+
+  @@unique([shopId, slug])
+  @@index([shopId, clientId])
+  @@map("v2_b2b_catalogs")
+}
+
+model V2B2BCatalogItem {
+  id               String   @id @default(cuid())
+  catalogId        String   @map("catalog_id")
+  productId        String   @map("product_id")
+  sortOrder        Int      @default(0) @map("sort_order")
+  notes            String?
+  customPriceCents Int?     @map("custom_price_cents")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  catalog V2B2BCatalog @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  product V2Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([catalogId, productId])
+  @@map("v2_b2b_catalog_items")
+}
+
+model V2B2BClient {
+  id                 String   @id @default(cuid())
+  shopId             String   @map("shop_id")
+  companyName        String   @map("company_name")
+  contactName        String?  @map("contact_name")
+  email              String
+  passwordHash       String?  @map("password_hash")
+  customerGroupId    String?  @map("customer_group_id")
+  assignedCatalogId  String?  @map("assigned_catalog_id")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  shop            V2Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerGroup   V2CustomerGroup?            @relation(fields: [customerGroupId], references: [id], onDelete: SetNull)
+  assignedCatalog V2B2BCatalog?               @relation("AssignedCatalog", fields: [assignedCatalogId], references: [id], onDelete: SetNull)
+  dedicatedCatalogs V2B2BCatalog[]            @relation("DedicatedCatalog")
+  priceOverrides  V2B2BClientPriceOverride[]
+  accessInvites   V2B2BAccessInvite[]
+  orders          V2B2BOrder[]
+
+  @@unique([shopId, email])
+  @@index([shopId, isActive])
+  @@map("v2_b2b_clients")
+}
+
+model V2B2BClientPriceOverride {
+  id         String   @id @default(cuid())
+  clientId   String   @map("client_id")
+  productId  String   @map("product_id")
+  priceCents Int      @map("price_cents")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  client  V2B2BClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  product V2Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, productId])
+  @@map("v2_b2b_client_price_overrides")
+}
+
+model V2B2BAccessInvite {
+  id        String    @id @default(cuid())
+  shopId    String    @map("shop_id")
+  catalogId String?   @map("catalog_id")
+  clientId  String?   @map("client_id")
+  token     String    @unique
+  label     String?
+  expiresAt DateTime  @map("expires_at")
+  maxUses   Int?      @map("max_uses")
+  useCount  Int       @default(0) @map("use_count")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  shop    V2Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  catalog V2B2BCatalog? @relation(fields: [catalogId], references: [id], onDelete: SetNull)
+  client  V2B2BClient?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  orders  V2B2BOrder[]
+
+  @@index([shopId, isActive])
+  @@map("v2_b2b_access_invites")
+}
+
+model V2B2BOrder {
+  id            String            @id @default(cuid())
+  shopId        String            @map("shop_id")
+  clientId      String?           @map("client_id")
+  inviteId      String?           @map("invite_id")
+  customerName  String            @map("customer_name")
+  customerPhone String?           @map("customer_phone")
+  customerEmail String?           @map("customer_email")
+  notes         String?
+  status        V2B2BOrderStatus  @default(PENDING)
+  items         Json
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  shop   V2Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  client V2B2BClient?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  invite V2B2BAccessInvite?  @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, status])
+  @@index([shopId, clientId])
+  @@index([shopId, createdAt])
+  @@map("v2_b2b_orders")
+}
+
+// ─── Site Composer Domain ─────────────────────────────────────────────────────
+
+/// SectionType is a global registry — not per-tenant.
+/// Seeded at deployment time, not editable by merchants.
+model V2SectionType {
+  id               String          @id
+  name             String
+  description      String?
+  configSchema     Json            @map("config_schema")
+  allowedBindings  V2BindingType[] @default([]) @map("allowed_bindings")
+  isActive         Boolean         @default(true) @map("is_active")
+
+  sections V2SectionInstance[]
+
+  @@map("v2_section_types")
+}
+
+model V2Page {
+  id             String     @id @default(cuid())
+  shopId         String     @map("shop_id")
+  type           V2PageType
+  slug           String
+  title          String
+  seoTitle       String?    @map("seo_title")
+  seoDescription String?    @map("seo_description")
+  canonicalRef   String?    @map("canonical_ref")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  shop           V2Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  versions       V2PageVersion[]
+  releaseRecords V2ReleaseRecord[]
+
+  @@unique([shopId, slug])
+  @@index([shopId, type])
+  @@map("v2_pages")
+}
+
+model V2PageVersion {
+  id         String              @id @default(cuid())
+  pageId     String              @map("page_id")
+  status     V2PageVersionStatus @default(DRAFT)
+  label      String?
+  publishedAt DateTime?          @map("published_at")
+  archivedAt  DateTime?          @map("archived_at")
+  createdBy  String              @map("created_by")
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  page              V2Page              @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  creator           V2User              @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  sections          V2SectionInstance[]
+  previewSnapshots  V2PreviewSnapshot[]
+  releaseRecord     V2ReleaseRecord?
+
+  @@index([pageId, status])
+  @@map("v2_page_versions")
+}
+
+model V2SectionInstance {
+  id             String              @id @default(cuid())
+  pageVersionId  String              @map("page_version_id")
+  sectionTypeId  String              @map("section_type_id")
+  label          String?
+  config         Json                @default("{}")
+  isEnabled      Boolean             @default(true) @map("is_enabled")
+  sortOrder      Int                 @default(0) @map("sort_order")
+  audienceRuleId String?             @map("audience_rule_id")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  pageVersion  V2PageVersion    @relation(fields: [pageVersionId], references: [id], onDelete: Cascade)
+  sectionType  V2SectionType    @relation(fields: [sectionTypeId], references: [id], onDelete: Restrict)
+  audienceRule V2AudienceRule?  @relation(fields: [audienceRuleId], references: [id], onDelete: SetNull)
+  bindings     V2SectionBinding[]
+  variants     V2SectionVariant[]
+
+  @@index([pageVersionId, sortOrder])
+  @@map("v2_section_instances")
+}
+
+model V2SectionBinding {
+  id                String        @id @default(cuid())
+  sectionInstanceId String        @map("section_instance_id")
+  slot              String
+  bindingType       V2BindingType @map("binding_type")
+  /// Exactly one of productId, collectionId, mediaAssetId is set (per bindingType).
+  /// MANUAL type uses manualValue instead.
+  productId         String?       @map("product_id")
+  collectionId      String?       @map("collection_id")
+  mediaAssetId      String?       @map("media_asset_id")
+  manualValue       Json?         @map("manual_value")
+  sortOrder         Int           @default(0) @map("sort_order")
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  sectionInstance V2SectionInstance @relation(fields: [sectionInstanceId], references: [id], onDelete: Cascade)
+  product         V2Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  collection      V2Collection?     @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  mediaAsset      V2MediaAsset?     @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+
+  @@index([sectionInstanceId, slot])
+  @@map("v2_section_bindings")
+}
+
+model V2SectionVariant {
+  id                String   @id @default(cuid())
+  sectionInstanceId String   @map("section_instance_id")
+  variantKey        String   @map("variant_key")
+  config            Json     @default("{}")
+  isActive          Boolean  @default(false) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  sectionInstance V2SectionInstance @relation(fields: [sectionInstanceId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionInstanceId, variantKey])
+  @@map("v2_section_variants")
+}
+
+// ─── Preview & Release Domain ─────────────────────────────────────────────────
+
+model V2PreviewSnapshot {
+  id            String   @id @default(cuid())
+  pageVersionId String   @map("page_version_id")
+  token         String   @unique
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  pageVersion V2PageVersion @relation(fields: [pageVersionId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("v2_preview_snapshots")
+}
+
+model V2PublishEvent {
+  id         String                   @id @default(cuid())
+  shopId     String                   @map("shop_id")
+  entityType V2PublishEventEntityType @map("entity_type")
+  entityId   String                   @map("entity_id")
+  action     V2PublishEventAction
+  targetId   String?                  @map("target_id")
+  actorId    String                   @map("actor_id")
+  occurredAt DateTime                 @default(now()) @map("occurred_at")
+  meta       Json?
+
+  shop  V2Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  actor V2User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([shopId, entityType, entityId])
+  @@index([shopId, occurredAt])
+  @@map("v2_publish_events")
+}
+
+model V2ReleaseRecord {
+  id            String   @id @default(cuid())
+  pageId        String   @map("page_id")
+  pageVersionId String   @unique @map("page_version_id")
+  publishedAt   DateTime @map("published_at")
+  publishedBy   String   @map("published_by")
+  rollbackFrom  String?  @map("rollback_from")
+
+  page        V2Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageVersion V2PageVersion @relation(fields: [pageVersionId], references: [id], onDelete: Cascade)
+  publisher   V2User        @relation(fields: [publishedBy], references: [id], onDelete: Restrict)
+
+  @@index([pageId])
+  @@map("v2_release_records")
+}
